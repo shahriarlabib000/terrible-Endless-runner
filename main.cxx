@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_ttf.h>
 #include <iostream>
 #include <random>
 
@@ -17,8 +18,8 @@ Entity e1, e2, e3;
 int bgSpeed = 1;
 int groundSpeed = 2;
 ///player animation vars
-int frameWidth = 64;  // Adjust according to frame dimensions
-int frameHeight = 64; // Adjust according to frame dimensions
+int frameWidth = 64;
+int frameHeight = 64;
 int numRows = 2;
 int numCols = 5;
 int currentFrame = 0;
@@ -30,12 +31,12 @@ float jumpVelocity = -7.0f;
 float gravity = 0.1f;
 
 bool gamePlaying=true;
-
+unsigned int score=0;
 void handleJump()
 {
     if (player.dest.y == playerdefpos)
     {
-        v0 = jumpVelocity; //jumpVelocity; // Adjust the jump velocity as needed
+        v0 = jumpVelocity;
     }
 }
 
@@ -51,7 +52,7 @@ void updatePlayerpos()
         v0 = 0.0f;
     }
 }
-    
+
 void update();
 int main(int argc, char *argv[])
 {
@@ -65,6 +66,8 @@ int main(int argc, char *argv[])
         SDL_Quit();
         return -1;
     }
+    TTF_Init();
+    TTF_Font *font=TTF_OpenFont("assets/mangatb.ttf",16);
     int screenWidth = dm.w;
     int screenHeight = dm.h;
 
@@ -94,22 +97,23 @@ int main(int argc, char *argv[])
     bg1.src = bg2.src = bg3.src = {0, 0, 1600, 720};
     bg2.dest = bg3.dest = bg1.dest;
     bg2.dest.y = bg3.dest.y = bg1.dest.y = 0;
-    bg2.dest.x = bg1.dest.w; // Position the second rectangle to the right of the first one
+    bg2.dest.x = bg1.dest.w;
     bg3.dest.x = bg1.dest.w * 2;
 
     g1.src = g2.src = g3.src = {0, 0, 1024, 64};
     g1.dest = g2.dest = g3.dest = {0, screenHeight - 64, 1024, 64};
-    g2.dest.x = g1.dest.w; // Position the second rectangle to the right of the first one
+    g2.dest.x = g1.dest.w;
     g3.dest.x = g1.dest.w * 2;
 
     e1.src = e2.src = e3.src = {0, 0, 16, 32};
-    e1.dest = e2.dest = e3.dest = {0, g1.dest.y - 64, 32, 64};
-    e2.dest.x = e1.dest.w + 1600; // Position the second rectangle to the right of the first one
+    e1.dest = e2.dest = e3.dest = {1600, g1.dest.y - 64, 32, 64};
+    e2.dest.x = e1.dest.w + 1600;
     e3.dest.x = e1.dest.w * 2+ 1600;
     playerdefpos = screenHeight - 164;
     player.dest = {50, playerdefpos, 128, 128};
-    SDL_Rect playerColiRect={50,playerdefpos,50,50};
+    SDL_Rect playerColiRect= {50,playerdefpos,50,50};
     SDL_Event event;
+    SDL_Rect textRect= {600,0,200,100};
     while (rw.running && gamePlaying)
     {
         while (SDL_PollEvent(&event))
@@ -124,11 +128,21 @@ int main(int argc, char *argv[])
         update();
         playerColiRect.y=player.dest.y;
         if(SDL_HasIntersection(&playerColiRect,&e1.dest)||
-        SDL_HasIntersection(&playerColiRect,&e2.dest)||
-        SDL_HasIntersection(&playerColiRect,&e2.dest)){
-        gamePlaying=false;
-        SDL_Delay(1000);
+                SDL_HasIntersection(&playerColiRect,&e2.dest)||
+                SDL_HasIntersection(&playerColiRect,&e2.dest)) {
+            gamePlaying=false;
+            SDL_Delay(1000);
         }
+        if(player.dest.x>e1.dest.x
+                || player.dest.x>e2.dest.x
+                || player.dest.x>e3.dest.x) {
+            score++;
+        }
+        std::string scorestr=std::to_string( score);
+        SDL_Color textColor = {0, 0, 0};
+        SDL_Surface* surface = TTF_RenderText_Solid(font, scorestr.c_str(), textColor);
+        SDL_Texture* texture = SDL_CreateTextureFromSurface(RenderWindow::renderer, surface);
+        SDL_FreeSurface(surface);
 
         rw.clear();
 
@@ -154,6 +168,7 @@ int main(int argc, char *argv[])
         rw.renderEntity(player);
         currentFrame = (currentFrame + 1) % numFrames;
 
+        SDL_RenderCopy(RenderWindow::renderer, texture, NULL,&textRect);
         rw.draw();
         SDL_Delay(10);
     }
@@ -207,17 +222,14 @@ void update()
     e3.dest.x -= groundSpeed;
     if (e1.dest.x + e1.dest.w <= 0)
     {
-        //  e1.dest.x = e3.dest.x + e3.dest.w+500;
         e1.dest.x = 1600 + getRandomNumber(0, 1600);
     }
     if (e2.dest.x + e2.dest.w <= 0)
     {
-        //e2.dest.x = e1.dest.x + e1.dest.w+500;
         e2.dest.x = 1600 + getRandomNumber(0, 1600);
     }
     if (e3.dest.x + e3.dest.w <= 0)
     {
-        //e3.dest.x = e2.dest.x + e2.dest.w+500;
         e3.dest.x = 1600 + getRandomNumber(0, 1600);
     }
 }
