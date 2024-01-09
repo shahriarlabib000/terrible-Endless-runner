@@ -10,13 +10,15 @@
 SDL_Window *RenderWindow::window = NULL;
 SDL_Renderer *RenderWindow::renderer = NULL;
 
+int screenWidth,screenHeight;
+    
 Entity bg1, bg2, bg3;
 Entity g1, g2, g3;
 Entity player;
 Entity e1, e2, e3;
 
 int bgSpeed = 1;
-int groundSpeed = 2;
+int groundSpeed = 5;
 ///player animation vars
 int frameWidth = 64;
 int frameHeight = 64;
@@ -28,7 +30,7 @@ int numFrames = 6;
 int playerdefpos;
 float v0 = 0.0f;
 float jumpVelocity = -7.0f;
-float gravity = 0.1f;
+float gravity = 0.15f;
 
 bool gamePlaying=true;
 unsigned int score=0;
@@ -68,8 +70,8 @@ int main(int argc, char *argv[])
     }
     TTF_Init();
     TTF_Font *font=TTF_OpenFont("assets/mangatb.ttf",16);
-    int screenWidth = dm.w;
-    int screenHeight = dm.h;
+     screenWidth = dm.w;
+     screenHeight = dm.h;
 
     RenderWindow::window = SDL_CreateWindow("Endless runner", 0, 0, screenWidth, screenHeight, SDL_WINDOW_FULLSCREEN_DESKTOP);
     RenderWindow::renderer = SDL_CreateRenderer(RenderWindow::window, -1, SDL_RENDERER_ACCELERATED);
@@ -77,7 +79,7 @@ int main(int argc, char *argv[])
     SDL_Texture *groundTex = rw.createTexture("assets/long ground.png");
     SDL_Texture *bgTexture = rw.createTexture("assets/bg.png");
     SDL_Texture *playerTex = rw.createTexture("assets/player.png");
-    SDL_Texture *cactusTex = rw.createTexture("assets/cactus.png");
+    SDL_Texture *cactusTex = rw.createTexture("assets/skbi.png");
 
     bg1.setTexture(bgTexture);
     bg2.setTexture(bgTexture);
@@ -105,17 +107,27 @@ int main(int argc, char *argv[])
     g2.dest.x = g1.dest.w;
     g3.dest.x = g1.dest.w * 2;
 
-    e1.src = e2.src = e3.src = {0, 0, 16, 32};
-    e1.dest = e2.dest = e3.dest = {1600, g1.dest.y - 64, 32, 64};
-    e2.dest.x = e1.dest.w + 1600;
-    e3.dest.x = e1.dest.w * 2+ 1600;
+    e1.src = e2.src = e3.src = {0, 0, 15, 30};
+    e1.dest = e2.dest = e3.dest = {screenWidth, g1.dest.y - 60, 30, 60};
+    e2.dest.x = e1.dest.w + screenWidth;
+    e3.dest.x = e1.dest.w * 2 + screenWidth;
+    
     playerdefpos = screenHeight - 164;
     player.dest = {50, playerdefpos, 128, 128};
-    SDL_Rect playerColiRect= {50,playerdefpos,50,50};
+    SDL_Rect playerColiRect= {player.dest.x+50,player.dest.y+50,30,40};
+    
     SDL_Event event;
     SDL_Rect textRect= {600,0,200,100};
+    
+    int fps=60;
+    int frameTime=1000/fps;
+    
+   // Uint32 mainTick= SDL_GetTicks();
+    
     while (rw.running && gamePlaying)
     {
+        int startTime= SDL_GetTicks();
+        
         while (SDL_PollEvent(&event))
         {
             rw.handleEvents(event);
@@ -126,12 +138,13 @@ int main(int argc, char *argv[])
         }
 
         update();
-        playerColiRect.y=player.dest.y;
+        playerColiRect.y=player.dest.y+50;
         if(SDL_HasIntersection(&playerColiRect,&e1.dest)||
                 SDL_HasIntersection(&playerColiRect,&e2.dest)||
                 SDL_HasIntersection(&playerColiRect,&e2.dest)) {
             gamePlaying=false;
             SDL_Delay(1000);
+            break;
         }
         if(player.dest.x>e1.dest.x
                 || player.dest.x>e2.dest.x
@@ -162,6 +175,7 @@ int main(int argc, char *argv[])
         int currentCol = currentFrame % numCols;
         if (player.dest.y == playerdefpos)
         {
+           // if(mainTick %100==0)
             player.src = {currentCol * frameWidth, currentRow * frameHeight, frameWidth, frameHeight};
         }
         updatePlayerpos();
@@ -169,8 +183,14 @@ int main(int argc, char *argv[])
         currentFrame = (currentFrame + 1) % numFrames;
 
         SDL_RenderCopy(RenderWindow::renderer, texture, NULL,&textRect);
+    //   SDL_RenderFillRect(RenderWindow::renderer,&playerColiRect);
         rw.draw();
-        SDL_Delay(10);
+        
+        int endTime=SDL_GetTicks();
+        if(endTime-startTime <frameTime){
+        SDL_Delay(frameTime-(endTime-startTime));
+       
+        }
     }
     return 0;
 }
@@ -222,14 +242,14 @@ void update()
     e3.dest.x -= groundSpeed;
     if (e1.dest.x + e1.dest.w <= 0)
     {
-        e1.dest.x = 1600 + getRandomNumber(0, 1600);
+        e1.dest.x = screenWidth + getRandomNumber(0, screenWidth);
     }
     if (e2.dest.x + e2.dest.w <= 0)
     {
-        e2.dest.x = 1600 + getRandomNumber(0, 1600);
+        e2.dest.x = screenWidth + getRandomNumber(0, screenWidth);
     }
     if (e3.dest.x + e3.dest.w <= 0)
     {
-        e3.dest.x = 1600 + getRandomNumber(0, 1600);
+        e3.dest.x = screenWidth + getRandomNumber(0, screenWidth);
     }
 }
