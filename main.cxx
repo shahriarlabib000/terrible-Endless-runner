@@ -10,8 +10,8 @@
 SDL_Window *RenderWindow::window = NULL;
 SDL_Renderer *RenderWindow::renderer = NULL;
 
-int screenWidth,screenHeight;
-    
+int screenWidth, screenHeight;
+
 Entity bg1, bg2, bg3;
 Entity g1, g2, g3;
 Entity player;
@@ -32,8 +32,8 @@ float v0 = 0.0f;
 float jumpVelocity = -7.0f;
 float gravity = 0.15f;
 
-bool gamePlaying=true;
-unsigned int score=0;
+bool gamePlaying = true;
+unsigned int score = 0;
 void handleJump()
 {
     if (player.dest.y == playerdefpos)
@@ -56,6 +56,7 @@ void updatePlayerpos()
 }
 
 void update();
+int getRandomNumber(int min, int max);
 int main(int argc, char *argv[])
 {
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
@@ -69,9 +70,9 @@ int main(int argc, char *argv[])
         return -1;
     }
     TTF_Init();
-    TTF_Font *font=TTF_OpenFont("assets/mangatb.ttf",16);
-     screenWidth = dm.w;
-     screenHeight = dm.h;
+    TTF_Font *font = TTF_OpenFont("assets/mangatb.ttf", 16);
+    screenWidth = dm.w;
+    screenHeight = dm.h;
 
     RenderWindow::window = SDL_CreateWindow("Endless runner", 0, 0, screenWidth, screenHeight, SDL_WINDOW_FULLSCREEN_DESKTOP);
     RenderWindow::renderer = SDL_CreateRenderer(RenderWindow::window, -1, SDL_RENDERER_ACCELERATED);
@@ -111,23 +112,37 @@ int main(int argc, char *argv[])
     e1.dest = e2.dest = e3.dest = {screenWidth, g1.dest.y - 60, 30, 60};
     e2.dest.x = e1.dest.w + screenWidth;
     e3.dest.x = e1.dest.w * 2 + screenWidth;
-    
+
     playerdefpos = screenHeight - 164;
     player.dest = {50, playerdefpos, 128, 128};
-    SDL_Rect playerColiRect= {player.dest.x+50,player.dest.y+50,30,40};
-    
+    SDL_Rect playerColiRect = {player.dest.x + 50, player.dest.y + 50, 30, 40};
+
     SDL_Event event;
-    SDL_Rect textRect= {600,0,200,100};
-    
-    int fps=60;
-    int frameTime=1000/fps;
-    
-   // Uint32 mainTick= SDL_GetTicks();
-    
+    SDL_Rect textRect = {600, 0, 200, 100};
+    SDL_Color textColor = {0, 0, 0};
+    SDL_Rect fpsRect = {0, 0, 50, 50};
+
+    int fps = 60;
+    int frameTime = 1000 / fps;
+
+    int currentfps = 0;
+    int counter = 0;
+    Uint32 startTime = SDL_GetTicks();
+
     while (rw.running && gamePlaying)
     {
-        int startTime= SDL_GetTicks();
-        
+        counter++;
+        Uint32 currentTime = SDL_GetTicks();
+        Uint32 elapsedTime = currentTime - startTime;
+
+        if (elapsedTime >= 1000)
+        {
+            // Calculate FPS and reset counter
+            currentfps = static_cast<int>((counter * 1000.0) / elapsedTime);
+            counter = 0;
+            startTime = currentTime;
+        }
+
         while (SDL_PollEvent(&event))
         {
             rw.handleEvents(event);
@@ -138,24 +153,28 @@ int main(int argc, char *argv[])
         }
 
         update();
-        playerColiRect.y=player.dest.y+50;
-        if(SDL_HasIntersection(&playerColiRect,&e1.dest)||
-                SDL_HasIntersection(&playerColiRect,&e2.dest)||
-                SDL_HasIntersection(&playerColiRect,&e2.dest)) {
-            gamePlaying=false;
+        playerColiRect.y = player.dest.y + 50;
+        if (SDL_HasIntersection(&playerColiRect, &e1.dest) ||
+            SDL_HasIntersection(&playerColiRect, &e2.dest) ||
+            SDL_HasIntersection(&playerColiRect, &e2.dest))
+        {
+            gamePlaying = false;
             SDL_Delay(1000);
             break;
         }
-        if(player.dest.x>e1.dest.x
-                || player.dest.x>e2.dest.x
-                || player.dest.x>e3.dest.x) {
+        if (player.dest.x > e1.dest.x || player.dest.x > e2.dest.x || player.dest.x > e3.dest.x)
+        {
             score++;
         }
-        std::string scorestr=std::to_string( score);
-        SDL_Color textColor = {0, 0, 0};
-        SDL_Surface* surface = TTF_RenderText_Solid(font, scorestr.c_str(), textColor);
-        SDL_Texture* texture = SDL_CreateTextureFromSurface(RenderWindow::renderer, surface);
+        std::string scorestr = std::to_string(score);
+
+        SDL_Surface *surface = TTF_RenderText_Solid(font, scorestr.c_str(), textColor);
+        SDL_Texture *texture = SDL_CreateTextureFromSurface(RenderWindow::renderer, surface);
         SDL_FreeSurface(surface);
+
+        SDL_Surface *surface2 = TTF_RenderText_Solid(font, std::to_string(currentfps).c_str(), textColor);
+        SDL_Texture *texturefps = SDL_CreateTextureFromSurface(RenderWindow::renderer, surface2);
+        SDL_FreeSurface(surface2);
 
         rw.clear();
 
@@ -175,25 +194,34 @@ int main(int argc, char *argv[])
         int currentCol = currentFrame % numCols;
         if (player.dest.y == playerdefpos)
         {
-           // if(mainTick %100==0)
             player.src = {currentCol * frameWidth, currentRow * frameHeight, frameWidth, frameHeight};
         }
         updatePlayerpos();
         rw.renderEntity(player);
         currentFrame = (currentFrame + 1) % numFrames;
 
-        SDL_RenderCopy(RenderWindow::renderer, texture, NULL,&textRect);
-    //   SDL_RenderFillRect(RenderWindow::renderer,&playerColiRect);
+        SDL_RenderCopy(RenderWindow::renderer, texture, NULL, &textRect);
+
+        SDL_RenderCopy(RenderWindow::renderer, texturefps, NULL, &fpsRect);
+
+        //SDL_RenderFillRect(RenderWindow::renderer,&playerColiRect);
         rw.draw();
-        
-        int endTime=SDL_GetTicks();
-        if(endTime-startTime <frameTime){
-        SDL_Delay(frameTime-(endTime-startTime));
-       
+
+        int endTime = SDL_GetTicks();
+        if (endTime - currentTime < frameTime)
+        {
+           SDL_Delay(frameTime - (endTime - currentTime));
         }
-    }
+        
+        if (score % 100 == 0)
+        {
+            textColor = {static_cast<Uint8>(getRandomNumber(0, 255)), static_cast<Uint8>(getRandomNumber(0, 255)), static_cast<Uint8>(getRandomNumber(0, 255))};
+        }
+     }
+
     return 0;
 }
+
 int getRandomNumber(int min, int max)
 {
     std::random_device rd;
